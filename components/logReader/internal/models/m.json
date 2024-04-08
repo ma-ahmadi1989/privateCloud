@@ -1,0 +1,38 @@
+{
+  "id": 2489651062,
+  "type": "PushEvent",
+  "actor": {
+    "id": 485033,
+    "login": "winterbe",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/winterbe",
+    "avatar_url": "https://avatars.githubusercontent.com/u/485033?"
+  },
+  "repo": {
+    "id": 28593843,
+    "name": "winterbe/streamjs",
+    "url": "https://api.github.com/repos/winterbe/streamjs"
+  },
+  "payload": {
+    "push_id": 536863975,
+    "size": 1,
+    "distinct_size": 1,
+    "ref": "refs/heads/master",
+    "head": "15b303203be31bd295bc831075da8f74b99b3981",
+    "before": "0fef99f604154ccfe1d2fcd0aadeffb5c58e43ff",
+    "commits": [
+      {
+        "sha": "15b303203be31bd295bc831075da8f74b99b3981",
+        "author": {
+          "email": "52a47bffd52d9cea1ee1362f2bd0c5f87fac9262@googlemail.com",
+          "name": "Benjamin Winterberg"
+        },
+        "message": "Add comparator support for min, max operations",
+        "distinct": true,
+        "url": "https://api.github.com/repos/winterbe/streamjs/commits/15b303203be31bd295bc831075da8f74b99b3981"
+      }
+    ]
+  },
+  "public": true,
+  "created_at": "2015-01-01T15:00:03Z"
+}
