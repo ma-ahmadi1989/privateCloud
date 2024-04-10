@@ -2,7 +2,7 @@ package service
 
 import (
 	"bufio"
-	"encoding/json"
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -10,14 +10,29 @@ import (
 	"logReader/internal/config"
 	"logReader/internal/models"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sync"
+	"syscall"
+
+	"github.com/tidwall/gjson"
 )
 
 func ReadEvents(wg *sync.WaitGroup) {
 	defer func() {
-		close(channels.GlobalChannels.GitEvents)
 		wg.Done()
+	}()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+	go func() {
+		sig := <-sigs
+		cancel()
+		close(channels.GlobalChannels.GitEvents)
+		log.Printf("terminate signal recieved on ReadEvent, signal: %+v", sig.String())
+
 	}()
 
 	eventFiles, err := GetEventFilesList()
@@ -28,7 +43,7 @@ func ReadEvents(wg *sync.WaitGroup) {
 	}
 
 	for _, eventFile := range eventFiles {
-		Extract(eventFile)
+		Extract(eventFile, ctx)
 	}
 
 }
@@ -51,44 +66,54 @@ func GetEventFilesList() ([]string, error) {
 	return eventFilesList, nil
 }
 
-func Extract(eventFilePath string) {
+func Extract(eventFilePath string, ctx context.Context) {
 	eventFile, err := os.Open(eventFilePath)
 	if err != nil {
 		log.Printf("failed to open event file: %s, error: %v", eventFilePath, err.Error())
 		return
 	}
+	defer func() {
+		eventFile.Close()
+		recover()
+	}()
 
 	fileScanner := bufio.NewScanner(eventFile)
 
-	for fileScanner.Scan() {
-		if fileScanner.Err() != nil {
-			log.Printf("failed to convert event, error: %v", fileScanner.Err().Error())
-			continue
-		}
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("recieving termination signal from os. stop reading event file: %s...", eventFilePath)
+			return
+		default:
+			fileScanner.Scan()
+			if fileScanner.Err() != nil {
+				log.Printf("failed to convert event, error: %v", fileScanner.Err().Error())
+				continue
+			}
 
-		eventRecord, err := ConvertToEventRecord(fileScanner.Text())
-		if err != nil {
-			log.Printf("failed to convert event, error: %v", err.Error())
-			continue
+			eventRecord, err := ConvertToEventRecord(fileScanner.Text())
+			if err != nil {
+				log.Printf("failed to convert event, error: %v", err.Error())
+				continue
+			}
+			channels.GlobalChannels.GitEvents <- eventRecord
+
 		}
-		channels.GlobalChannels.GitEvents <- eventRecord
 	}
+
 }
 
 func ConvertToEventRecord(eventRecord string) (models.GitEvent, error) {
-	var extractedEvent models.GitEvent
-	var loadedEvent map[string]interface{}
-	err := json.Unmarshal([]byte(eventRecord), loadedEvent)
-	if err != nil {
-		errorMessage := fmt.Sprintf("failed to conver the event record: %s, error: %v", eventRecord, err.Error())
-		log.Println(errorMessage)
-		return extractedEvent, errors.New(errorMessage)
+	extractedEvent := models.GitEvent{
+		EventID:      gjson.Get(eventRecord, "id").String(),
+		Type:         gjson.Get(eventRecord, "type").String(),
+		GitUserName:  gjson.Get(eventRecord, "actor.login").String(),
+		GitRepoName:  gjson.Get(eventRecord, "repo.name").String(),
+		GitRepoURL:   gjson.Get(eventRecord, "repo.url").String(),
+		Public:       gjson.Get(eventRecord, "public").Bool(),
+		CreatedAt:    gjson.Get(eventRecord, "created_at").Time(),
+		CommitsCount: len(gjson.Get(eventRecord, "payload.commits").Array()),
 	}
 
-	extractedEvent = models.GitEvent{
-		EventID:     loadedEvent["id"].(string),
-		Type:        loadedEvent["type"].(string),
-		GitUserName: loadedEvent["actor"]["login"].string,
-	}
-
+	return extractedEvent, nil
 }

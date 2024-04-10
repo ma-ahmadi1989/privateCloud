@@ -18,7 +18,4 @@ func Terminate() {
 		log.Printf("failed to safe terminate the app, failed to send the termination signal, error: %v", err.Error())
 		log.Panic("app is terminating gracefully... ")
 	}
-
-	log.Println("the app is safely terminated")
-
 }

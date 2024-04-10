@@ -15,5 +15,8 @@ func main() {
 	logReaderWaitGroup.Add(1)
 	go service.ReadEvents(&logReaderWaitGroup)
 
+	logReaderWaitGroup.Add(1)
+	go service.EventLoader(&logReaderWaitGroup)
+
 	logReaderWaitGroup.Wait()
 }
