@@ -24,15 +24,14 @@ func ReadEvents(wg *sync.WaitGroup) {
 	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
-
 	sigs := make(chan os.Signal, 1)
+
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		sig := <-sigs
 		cancel()
 		close(channels.GlobalChannels.GitEvents)
 		log.Printf("terminate signal recieved on ReadEvent, signal: %+v", sig.String())
-
 	}()
 
 	eventFiles, err := GetEventFilesList()
