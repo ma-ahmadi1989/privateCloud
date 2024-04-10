@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"logReader/internal/channels"
@@ -25,17 +27,16 @@ func EventLoader(wg *sync.WaitGroup) {
 		wg.Done()
 	}()
 
+	var eventLoadWaitGroup sync.WaitGroup
+	delayBetweenRequests := 1000000 / config.LogReaderConfigs.Rate // microseconds
 	ctx, cancel := context.WithCancel(context.Background())
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
-	var eventLoadWaitGroup sync.WaitGroup
-	delayBetweenRequests := 1000000 / config.LogReaderConfigs.Rate // micsosecond
 
+	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		sig := <-sigs
 		log.Printf("terminate signal recieved on  EventLoader, signal: %+v", sig.String())
 		cancel()
-
 	}()
 
 	for {
@@ -44,42 +45,50 @@ func EventLoader(wg *sync.WaitGroup) {
 			return
 		case event := <-channels.GlobalChannels.GitEvents:
 			eventLoadWaitGroup.Add(1)
-			go Load(event, ctx, &eventLoadWaitGroup)
+			go Load(event, &eventLoadWaitGroup)
 			time.Sleep(time.Duration(delayBetweenRequests) * time.Microsecond)
 		default:
-			log.Println("no event to load")
 			time.Sleep(1 * time.Second)
 		}
 	}
-
 }
 
-func Load(eventLog models.GitEvent, ctx context.Context, wg *sync.WaitGroup) {
+func Load(eventLog models.GitEvent, wg *sync.WaitGroup) {
 	defer func() {
 		recover()
 		wg.Done()
 	}()
 
-	jsonEvent, _ := json.Marshal(eventLog)
-	req, err := http.NewRequest("POST", config.LoadLogReaderConfigs().GatewayURL, bytes.NewBuffer(jsonEvent))
+	req, err := GenerateRequest(eventLog)
 	if err != nil {
-		log.Fatalf("Error occurred during request creation: %s", err.Error())
+		log.Printf("Error occurred during request creation: %s", err.Error())
+		return
 	}
-
-	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("Error occurred during request execution: %s", err.Error())
+		log.Printf("Error occurred during request execution: %s", err.Error())
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("Error occurred while reading the response body: %s", err.Error())
+		log.Printf("Error occurred while reading the response body: %s", err.Error())
 	}
 
-	log.Printf("Response: %s", body)
+	log.Printf("Response: %s, status: %s (%d)", body, resp.Status, resp.StatusCode)
 
+}
+
+func GenerateRequest(eventLog models.GitEvent) (*http.Request, error) {
+	evenLogJson, _ := json.Marshal(eventLog)
+	httpRequest, err := http.NewRequest("POST", config.LogReaderConfigs.GatewayURL, bytes.NewBuffer(evenLogJson))
+	if err != nil {
+		errorMessage := fmt.Sprintf("failed to marshal event log before loading, error: %+v", err.Error())
+		return httpRequest, errors.New(errorMessage)
+	}
+
+	httpRequest.Header.Set("Content-Type", "application/json")
+	return httpRequest, nil
 }
