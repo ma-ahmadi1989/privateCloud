@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+ kafka-zookeeper:
+    container_name: kafka-zookeeper
+    image: docker.arvancloud.ir/confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+ kafka-broker:
+    container_name: kafka-broker
+    image: docker.arvancloud.ir/confluentinc/cp-kafka:latest
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: kafka-zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://192.168.1.125:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+    depends_on:
+      - kafka-zookeeper
+
+ kafka-ui:
+    container_name: kafka-ui
+    image: docker.arvancloud.ir/provectuslabs/kafka-ui:latest
+    ports:
+      - "9000:9000"
+    environment:
+     KAFKA_CLUSTERS_0_NAME: local
+     KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-broker:9092
+    depends_on:
+      - kafka-broker

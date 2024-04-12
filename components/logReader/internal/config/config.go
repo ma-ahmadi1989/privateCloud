@@ -39,7 +39,7 @@ func init() {
 
 	LogReaderConfigs.GatewayURL = os.Getenv("GIT_INSIGHT_GATEWAY_URl")
 	if LogReaderConfigs.GatewayURL == "" {
-		LogReaderConfigs.GatewayURL = "http://127.0.0.1:9898/user"
+		LogReaderConfigs.GatewayURL = "http://127.0.0.1:9898"
 	}
 }
 

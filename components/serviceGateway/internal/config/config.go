@@ -9,6 +9,7 @@ import (
 type ServiceGatewayConfig struct {
 	Redis RedisConfig
 	API   API
+	Kafka KafkaConfig
 }
 
 var ServiceGatewayConfigs *ServiceGatewayConfig
@@ -22,6 +23,7 @@ func init() {
 	ServiceGatewayConfigs = &ServiceGatewayConfig{
 		Redis: LoadRedisConfig(),
 		API:   LoadAPIConfig(),
+		Kafka: LoadKafkaConfig(),
 	}
 }
 

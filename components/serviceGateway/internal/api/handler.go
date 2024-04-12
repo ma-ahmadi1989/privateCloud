@@ -1,14 +1,16 @@
 package api
 
 import (
+	"fmt"
 	"serviceGateway/internal/models"
+	"serviceGateway/internal/repository"
 
 	"github.com/gofiber/fiber"
 )
 
 func GetEvent(context *fiber.Ctx) {
-	event := models.GitEvent{}
-	if err := context.BodyParser(event); err != nil {
+	var event models.GitEvent
+	if err := context.BodyParser(&event); err != nil {
 		responseMessage := map[string]string{
 			"error":   err.Error(),
 			"message": "failed to parse the body",
@@ -26,7 +28,7 @@ func GetEvent(context *fiber.Ctx) {
 		return
 	}
 
-	if err := AddToQueue(event); err != nil {
+	if err := repository.StoreInKafka(event); err != nil {
 		responseMessage := map[string]string{
 			"error":   err.Error(),
 			"message": "failed to accept the request",
@@ -40,9 +42,12 @@ func GetEvent(context *fiber.Ctx) {
 }
 
 func IsInBlackList(event models.GitEvent) bool {
-	return true
-}
+	repoKey, err := repository.GetRepoKey(event)
+	if err != nil {
+		fmt.Printf("failed to detect the repo key, event: %+v, error: %+v", event, err.Error())
+		return false
+	}
 
-func AddToQueue(even models.GitEvent) error {
-	return nil
+	_, err = repository.GetFromRedis(repoKey)
+	return err != nil
 }
