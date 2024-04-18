@@ -17,7 +17,7 @@ func LoadKafkaConfig() KafkaConfig {
 
 	kafkaConfig.ConnectionString = os.Getenv("KAFKA_EVENT_QUEUE_KAFKA_CONNECTION_STRING")
 	if kafkaConfig.ConnectionString == "" {
-		kafkaConfig.ConnectionString = "localhost:9092"
+		kafkaConfig.ConnectionString = "localhost:9094"
 	}
 
 	return kafkaConfig

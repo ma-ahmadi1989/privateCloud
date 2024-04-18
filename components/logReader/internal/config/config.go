@@ -34,7 +34,7 @@ func init() {
 
 	LogReaderConfigs.Rate, err = strconv.Atoi(os.Getenv("EVENT_UPLOAD_RATE"))
 	if err != nil {
-		LogReaderConfigs.Rate = 5
+		LogReaderConfigs.Rate = 1
 	}
 
 	LogReaderConfigs.GatewayURL = os.Getenv("GIT_INSIGHT_GATEWAY_URl")

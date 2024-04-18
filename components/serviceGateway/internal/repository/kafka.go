@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+
 	"log"
 	"serviceGateway/internal/config"
 	"serviceGateway/internal/models"
 
 	"github.com/IBM/sarama"
-	"github.com/google/uuid"
+	"github.com/mitchellh/hashstructure"
 )
 
 func StoreInKafka(event models.GitEvent) error {
@@ -59,16 +61,12 @@ func StoreInKafka(event models.GitEvent) error {
 }
 
 func GetRepoKey(event models.GitEvent) (string, error) {
-	keySource := fmt.Sprintf("%s%s",
-		event.GitUserName,
-		event.GitRepoName,
-	)
+	key, err := hashstructure.Hash(event, nil)
 
-	eventUUID, err := uuid.Parse(keySource)
 	if err != nil {
-		errorMessage := fmt.Sprintf("faild to generate the event key before storing in event queueu, event: %+v", event)
+		errorMessage := fmt.Sprintf("faild to generate the event key before storing in event queue, error: %+v", err.Error())
 		return "", errors.New(errorMessage)
 	}
 
-	return eventUUID.String(), nil
+	return strconv.FormatUint(key, 10), nil
 }

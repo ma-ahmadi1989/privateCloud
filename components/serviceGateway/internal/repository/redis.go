@@ -31,5 +31,9 @@ func SetOnRedis(key string, value interface{}, expiration time.Duration) error {
 
 func GetFromRedis(key string) (string, error) {
 	ctx := context.Background()
-	return RedisClient.Get(ctx, key).Result()
+	result, err := RedisClient.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return "", nil
+	}
+	return result, err
 }
