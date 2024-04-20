@@ -6,11 +6,13 @@ import (
 	"log"
 	"serviceGateway/internal/models"
 	"serviceGateway/internal/repository"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func GetEvent(context *fiber.Ctx) error {
+	nowTime := time.Now()
 	var event models.GitEvent
 	if err := context.BodyParser(&event); err != nil {
 		responseMessage := map[string]string{
@@ -19,6 +21,7 @@ func GetEvent(context *fiber.Ctx) error {
 		}
 		return context.Status(fiber.StatusBadRequest).JSON(responseMessage)
 	}
+	log.Println("end of request parse", time.Since(nowTime))
 
 	blackListed, err := IsInBlackList(event)
 	if err != nil {
@@ -28,6 +31,8 @@ func GetEvent(context *fiber.Ctx) error {
 		}
 		return context.Status(fiber.StatusInternalServerError).JSON(responseMessage)
 	}
+	log.Println("end of black list check", time.Since(nowTime))
+
 	if blackListed {
 		responseMessage := map[string]string{
 			"error":   "blacklisted",
@@ -36,13 +41,7 @@ func GetEvent(context *fiber.Ctx) error {
 		return context.Status(fiber.StatusForbidden).JSON(responseMessage)
 	}
 
-	if err := repository.StoreInKafka(event); err != nil {
-		responseMessage := map[string]string{
-			"error":   err.Error(),
-			"message": "failed to accept the request",
-		}
-		return context.Status(fiber.ErrInternalServerError.Code).JSON(responseMessage)
-	}
+	go repository.StoreInKafka(event)
 
 	return context.Status(201).JSON("Created")
 

@@ -14,8 +14,9 @@ var RedisClient *redis.Client
 func InitRedisClient() {
 	ctx := context.Background()
 	RedisClient = redis.NewClient(&redis.Options{
-		Addr: config.ServiceGatewayConfigs.Redis.Host + ":" + config.ServiceGatewayConfigs.Redis.Port,
-		DB:   config.ServiceGatewayConfigs.Redis.DB,
+		Addr:     config.ServiceGatewayConfigs.Redis.Host + ":" + config.ServiceGatewayConfigs.Redis.Port,
+		DB:       config.ServiceGatewayConfigs.Redis.DB,
+		PoolSize: 10,
 	})
 
 	_, err := RedisClient.Ping(ctx).Result()

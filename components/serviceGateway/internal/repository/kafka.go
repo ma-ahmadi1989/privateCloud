@@ -14,7 +14,7 @@ import (
 	"github.com/mitchellh/hashstructure"
 )
 
-func StoreInKafka(event models.GitEvent) error {
+func StoreInKafka(event models.GitEvent) {
 	// Setup configuration
 	kafkaProducerConfig := sarama.NewConfig()
 	kafkaProducerConfig.Producer.Return.Successes = true
@@ -57,7 +57,6 @@ func StoreInKafka(event models.GitEvent) error {
 		log.Printf("Failed to send message: %v", err)
 	}
 
-	return nil
 }
 
 func GetRepoKey(event models.GitEvent) (string, error) {
